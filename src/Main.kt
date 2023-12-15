@@ -1,16 +1,72 @@
-//TIP Press <shortcut raw="SHIFT"/> twice to open the Search Everywhere dialog and type <b>show whitespaces</b>,
-// then press <shortcut raw="ENTER"/>. You can now see whitespace characters in your code.
-fun main() {
-    val name = "Kotlin"
-    //TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
-    // to see how IntelliJ IDEA suggests fixing it.
-    println("Hello, " + name + "!")
+import java.io.File
 
-    //TIP click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
-    // To <b>Run</b> code, press <shortcut actionId="Run"/> or
-    for (i in 1..5) {
-        //TIP Press <shortcut actionId="Debug"/> to start debugging your code. We have set one <icon src="AllIcons.Debugger.Db_set_breakpoint"/> breakpoint
-        // for you, but you can always add more by pressing <shortcut actionId="ToggleLineBreakpoint"/>.
-        println("i = $i")
+data class Replica(
+    val index: Int, val text: String
+)
+
+data class Actor(
+    val name: String, val lines: MutableList<Replica> = mutableListOf()
+)
+
+
+fun parseScript(script: List<String>): List<Actor> {
+    val actors = mutableListOf<Actor>()
+
+    var currentActor: Actor? = null
+
+
+    script.forEachIndexed { index, text ->
+        val (role, text) = text.split(": ", limit = 2)
+        val actor = actors.firstOrNull { it.name == role }
+        if (actor != null) {
+            actor.lines.add(Replica(index + 1, text))
+        } else {
+            currentActor = Actor(name = role, lines = mutableListOf(Replica(index + 1, text)))
+            actors.add(currentActor!!)
+        }
     }
+
+    return actors
+}
+
+fun generateOutput(actors: List<Actor>): String {
+    val result = StringBuilder()
+
+    for (actor in actors) {
+        result.append("${actor.name}:\n")
+        actor.lines.forEach { replica ->
+            result.append("${replica.index}) ${replica.text}\n")
+        }
+        result.append("\n")
+    }
+
+    return result.toString()
+}
+
+fun main() {
+    val inputFile = File("input.txt")
+    val outputFile = File("output.txt")
+
+    val roles = mutableListOf<String>()
+    val textLines = mutableListOf<String>()
+
+    var isRolesSection = true
+
+    inputFile.forEachLine { line ->
+        when {
+            line.startsWith("roles:") -> isRolesSection = true
+            line.startsWith("textLines:") -> isRolesSection = false
+            isRolesSection -> roles.add(line.trim())
+            else -> textLines.add(line.trim())
+        }
+    }
+
+    val actors = parseScript(textLines)
+
+    val output = generateOutput(actors)
+
+    println(output)
+
+    outputFile.writeText(output)
+    println("Output written to ${outputFile.absolutePath}")
 }
